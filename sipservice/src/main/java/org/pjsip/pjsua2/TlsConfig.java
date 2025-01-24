@@ -118,7 +118,7 @@ public class TlsConfig extends PersistentObject {
   }
 
   public void setVerifyServer(boolean value) {
-    pjsua2JNI.TlsConfig_verifyServer_set(swigCPtr, this, value);
+    pjsua2JNI.TlsConfig_verifyServer_set(swigCPtr, this, false);
   }
 
   public boolean getVerifyServer() {
@@ -126,7 +126,7 @@ public class TlsConfig extends PersistentObject {
   }
 
   public void setVerifyClient(boolean value) {
-    pjsua2JNI.TlsConfig_verifyClient_set(swigCPtr, this, value);
+    pjsua2JNI.TlsConfig_verifyClient_set(swigCPtr, this, false);
   }
 
   public boolean getVerifyClient() {
@@ -134,7 +134,7 @@ public class TlsConfig extends PersistentObject {
   }
 
   public void setRequireClientCert(boolean value) {
-    pjsua2JNI.TlsConfig_requireClientCert_set(swigCPtr, this, value);
+    pjsua2JNI.TlsConfig_requireClientCert_set(swigCPtr, this, false);
   }
 
   public boolean getRequireClientCert() {

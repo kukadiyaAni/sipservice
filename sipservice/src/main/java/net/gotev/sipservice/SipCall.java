@@ -13,7 +13,6 @@ import org.pjsip.pjsua2.CallOpParam;
 import org.pjsip.pjsua2.CallSetting;
 import org.pjsip.pjsua2.CallVidSetStreamParam;
 import org.pjsip.pjsua2.Media;
-import org.pjsip.pjsua2.MediaFmtChangedEvent;
 import org.pjsip.pjsua2.OnCallMediaEventParam;
 import org.pjsip.pjsua2.OnCallMediaStateParam;
 import org.pjsip.pjsua2.OnCallStateParam;
@@ -25,9 +24,7 @@ import org.pjsip.pjsua2.VideoPreview;
 import org.pjsip.pjsua2.VideoPreviewOpParam;
 import org.pjsip.pjsua2.VideoWindow;
 import org.pjsip.pjsua2.VideoWindowHandle;
-import org.pjsip.pjsua2.pjmedia_dir;
 import org.pjsip.pjsua2.pjmedia_event_type;
-import org.pjsip.pjsua2.pjmedia_rtcp_fb_type;
 import org.pjsip.pjsua2.pjmedia_type;
 import org.pjsip.pjsua2.pjsip_inv_state;
 import org.pjsip.pjsua2.pjsip_role_e;
@@ -36,11 +33,10 @@ import org.pjsip.pjsua2.pjsua2;
 import org.pjsip.pjsua2.pjsua_call_flag;
 import org.pjsip.pjsua2.pjsua_call_media_status;
 import org.pjsip.pjsua2.pjsua_call_vid_strm_op;
-import org.pjsip.pjsua2.pjsua_vid_req_keyframe_method;
 
 /**
  * Wrapper around PJSUA2 Call object.
- * @author gotev (Aleksandar Gotev)
+ *
  */
 @SuppressWarnings("unused")
 public class SipCall extends Call {
@@ -100,6 +96,7 @@ public class SipCall extends Call {
             CallInfo info = getInfo();
             int callID = info.getId();
             int callState = info.getState();
+            System.out.println("callsState " + callState);
             int callStatus = pjsip_status_code.PJSIP_SC_NULL;
 
             /*
@@ -121,6 +118,7 @@ public class SipCall extends Call {
             if (callState == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
                 checkAndStopLocalRingBackTone();
                 stopVideoFeeds();
+                stopSendingKeyFrame();
                 account.removeCall(callID);
                 if (connectTimestamp > 0 && streamInfo != null && streamStat != null) {
                     try {
@@ -135,6 +133,7 @@ public class SipCall extends Call {
                 connectTimestamp = System.currentTimeMillis();
                 if (videoCall) {
                     setVideoMute(false);
+                    startSendingKeyFrame();
                 }
 
                 // check whether the 183 has arrived or not
@@ -197,34 +196,15 @@ public class SipCall extends Call {
 
     @Override
     public void onCallMediaEvent(OnCallMediaEventParam prm) {
-        int evType = prm.getEv().getType();
-        switch (evType) {
-            case pjmedia_event_type.PJMEDIA_EVENT_FMT_CHANGED:
-                try {
-                    CallInfo callInfo = getInfo();
-                    CallMediaInfo mediaInfo = callInfo.getMedia().get((int)prm.getMedIdx());
-                    if (mediaInfo.getType() == pjmedia_type.PJMEDIA_TYPE_VIDEO &&
-                            mediaInfo.getDir() == pjmedia_dir.PJMEDIA_DIR_DECODING) {
-                        MediaFmtChangedEvent fmtEvent = prm.getEv().getData().getFmtChanged();
-                        Logger.info(LOG_TAG, "Notify new video size");
-                        account.getService().getBroadcastEmitter().videoSize(
-                                (int) fmtEvent.getNewWidth(),
-                                (int) fmtEvent.getNewHeight()
-                        );
-                    }
-                } catch (Exception ex) {
-                    Logger.error(LOG_TAG, "Unable to get video dimensions", ex);
-                }
-                break;
-            case pjmedia_event_type.PJMEDIA_EVENT_RX_RTCP_FB:
-                Logger.debug(LOG_TAG, "Keyframe request received");
-                if (prm.getEv().getData() != null &&
-                        prm.getEv().getData().getRtcpFb().getFbType() == pjmedia_rtcp_fb_type.PJMEDIA_RTCP_FB_NACK &&
-                        prm.getEv().getData().getRtcpFb().getIsParamLengthZero()
-                ) {
-                    Logger.info(LOG_TAG, "Sending new keyframe");
-                    sendKeyFrame();
-                }
+        if (prm.getEv().getType() == pjmedia_event_type.PJMEDIA_EVENT_FMT_CHANGED) {
+            // Sending new video size
+            try {
+                account.getService().getBroadcastEmitter().videoSize(
+                        (int) mVideoWindow.getInfo().getSize().getW(),
+                        (int) mVideoWindow.getInfo().getSize().getH());
+            } catch (Exception ex) {
+                Logger.error(LOG_TAG, "Unable to get video dimensions", ex);
+            }
         }
         super.onCallMediaEvent(prm);
     }
@@ -558,7 +538,6 @@ public class SipCall extends Call {
         CallSetting callSetting = param.getOpt();
         callSetting.setAudioCount(1);
         callSetting.setVideoCount(videoCall ? 1 : 0);
-        callSetting.setReqKeyframeMethod(pjsua_vid_req_keyframe_method.PJSUA_VID_REQ_KEYFRAME_RTCP_PLI);
     }
 
     public void setVideoMute(boolean videoMute) {
@@ -587,12 +566,22 @@ public class SipCall extends Call {
         this.frontCamera = frontCamera;
     }
 
-    private void sendKeyFrame() {
+    private final Runnable sendKeyFrameRunnable = () -> {
         try {
             vidSetStream(pjsua_call_vid_strm_op.PJSUA_CALL_VID_STRM_SEND_KEYFRAME, new CallVidSetStreamParam());
         } catch (Exception ex) {
-            Logger.error(LOG_TAG, "Error sending keyframe", ex);
+            Logger.error(LOG_TAG, "Error sending periodic keyframe", ex);
+        } finally {
+            startSendingKeyFrame();
         }
+    };
+
+    private void startSendingKeyFrame() {
+        account.getService().enqueueDelayedJob(sendKeyFrameRunnable, SipServiceConstants.DELAYED_JOB_DEFAULT_DELAY);
+    }
+
+    private void stopSendingKeyFrame() {
+        account.getService().dequeueJob(sendKeyFrameRunnable);
     }
 
     private void sendCallStats(int callID, int duration, int callStatus) {

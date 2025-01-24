@@ -106,7 +106,7 @@ public interface SipServiceConstants {
     String ANDROID_VP9_CODEC_ID = "VP9/106";
 
     /**
-     * Janus Bridge call specific parameters.
+     * Bridge call specific parameters.
      */
     String PROFILE_LEVEL_ID_HEADER = "profile-level-id";
     String PROFILE_LEVEL_ID_LOCAL = "42e01e";

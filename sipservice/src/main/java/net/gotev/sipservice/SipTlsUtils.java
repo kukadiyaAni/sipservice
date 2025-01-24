@@ -12,8 +12,8 @@ import java.util.ArrayList;
 /**
  * connect
  * <p>
- * Created by Vincenzo Esposito on 07/10/22.
- * Copyright © 2022 VoiSmart S.r.l. All rights reserved.
+ *
+ *
  */
 public class SipTlsUtils {
 

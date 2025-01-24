@@ -3,12 +3,18 @@ package net.gotev.sipservice;
 import static net.gotev.sipservice.ObfuscationHelper.getValue;
 import static net.gotev.sipservice.SipServiceCommand.AGENT_NAME;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.Surface;
+import android.widget.Toast;
 
+import org.pjsip.pjsua2.AccountVideoConfig;
 import org.pjsip.pjsua2.AudDevManager;
 import org.pjsip.pjsua2.CallOpParam;
 import org.pjsip.pjsua2.CallVidSetStreamParam;
@@ -16,9 +22,11 @@ import org.pjsip.pjsua2.CodecInfo;
 import org.pjsip.pjsua2.CodecInfoVector2;
 import org.pjsip.pjsua2.EpConfig;
 import org.pjsip.pjsua2.IpChangeParam;
+import org.pjsip.pjsua2.TlsConfig;
 import org.pjsip.pjsua2.TransportConfig;
 import org.pjsip.pjsua2.VidDevManager;
 import org.pjsip.pjsua2.pj_qos_type;
+import org.pjsip.pjsua2.pjmedia_echo_flag;
 import org.pjsip.pjsua2.pjmedia_orient;
 import org.pjsip.pjsua2.pjsip_inv_state;
 import org.pjsip.pjsua2.pjsip_transport_type_e;
@@ -34,7 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Sip Service.
- * @author gotev (Aleksandar Gotev)
+ *
  */
 public class SipService extends BackgroundService implements SipServiceConstants {
 
@@ -190,6 +198,24 @@ public class SipService extends BackgroundService implements SipServiceConstants
             }
         });
 
+        final String CHANNELID = "Foreground Service ID";
+        NotificationChannel channel = new NotificationChannel(
+                CHANNELID,
+                CHANNELID,
+                NotificationManager.IMPORTANCE_LOW
+        );
+
+
+            getSystemService(NotificationManager.class).createNotificationChannel(channel);
+
+            Notification.Builder notification = new Notification.Builder(this, CHANNELID)
+                    .setContentText("Service:PressOne is running")
+                    .setContentTitle("Service:PressOne enabled")
+                    .setSmallIcon(R.drawable.ic_launcher_background);
+
+            startForeground(1001, notification.build());
+
+
         return START_NOT_STICKY;
     }
 
@@ -225,9 +251,13 @@ public class SipService extends BackgroundService implements SipServiceConstants
 
     private void handleGetCallStatus(Intent intent) {
         String accountID = intent.getStringExtra(PARAM_ACCOUNT_ID);
-        int callID = intent.getIntExtra(PARAM_CALL_ID, 0);
+        String callID = intent.getStringExtra(PARAM_CALL_ID);
 
-        SipCall sipCall = getCall(accountID, callID);
+        if(callID.equals("")){
+            callID = "0";
+        }
+
+        SipCall sipCall = getCall(accountID, Integer.parseInt(callID));
         if (sipCall != null) {
             int callStatusCode = callStatus;
             try {
@@ -236,13 +266,14 @@ public class SipService extends BackgroundService implements SipServiceConstants
                 ex.printStackTrace();
             }
 
-            mBroadcastEmitter.callState(accountID, callID, sipCall.getCurrentState(), callStatusCode, sipCall.getConnectTimestamp());
+            mBroadcastEmitter.callState(accountID, Integer.parseInt(callID), sipCall.getCurrentState(), callStatusCode, sipCall.getConnectTimestamp());
         }
     }
 
     private void handleSendDTMF(Intent intent) {
         String accountID = intent.getStringExtra(PARAM_ACCOUNT_ID);
         int callID = intent.getIntExtra(PARAM_CALL_ID, 0);
+
         String dtmf = intent.getStringExtra(PARAM_DTMF);
 
         SipCall sipCall = getCall(accountID, callID);
@@ -258,9 +289,13 @@ public class SipService extends BackgroundService implements SipServiceConstants
 
     private void handleAcceptIncomingCall(Intent intent) {
         String accountID = intent.getStringExtra(PARAM_ACCOUNT_ID);
-        int callID = intent.getIntExtra(PARAM_CALL_ID, 0);
+        String callID = intent.getStringExtra(PARAM_CALL_ID);
 
-        SipCall sipCall = getCall(accountID, callID);
+        if(callID.equals("")){
+            callID = "0";
+        }
+
+        SipCall sipCall = getCall(accountID, Integer.parseInt(callID));
         if (sipCall != null) {
             boolean isVideo = intent.getBooleanExtra(PARAM_IS_VIDEO, false);
             try {
@@ -275,9 +310,13 @@ public class SipService extends BackgroundService implements SipServiceConstants
 
     private void handleSetCallHold(Intent intent) {
         String accountID = intent.getStringExtra(PARAM_ACCOUNT_ID);
-        int callID = intent.getIntExtra(PARAM_CALL_ID, 0);
+        String callID = intent.getStringExtra(PARAM_CALL_ID);
 
-        SipCall sipCall = getCall(accountID, callID);
+        if(callID == null || callID.equals("")){
+            callID = "0";
+        }
+
+        SipCall sipCall = getCall(accountID, Integer.parseInt(callID));
         if (sipCall != null) {
             boolean hold = intent.getBooleanExtra(PARAM_HOLD, false);
             try {
@@ -291,9 +330,13 @@ public class SipService extends BackgroundService implements SipServiceConstants
 
     private void handleToggleCallHold(Intent intent) {
         String accountID = intent.getStringExtra(PARAM_ACCOUNT_ID);
-        int callID = intent.getIntExtra(PARAM_CALL_ID, 0);
+        String callID = intent.getStringExtra(PARAM_CALL_ID);
 
-        SipCall sipCall = getCall(accountID, callID);
+        if(callID == null || callID.equals("")){
+            callID = "0";
+        }
+
+        SipCall sipCall = getCall(accountID, Integer.parseInt(callID));
         if (sipCall != null) {
             try {
                 sipCall.toggleHold();
@@ -322,9 +365,13 @@ public class SipService extends BackgroundService implements SipServiceConstants
 
     private void handleToggleCallMute(Intent intent) {
         String accountID = intent.getStringExtra(PARAM_ACCOUNT_ID);
-        int callID = intent.getIntExtra(PARAM_CALL_ID, 0);
+        String callID = intent.getStringExtra(PARAM_CALL_ID);
 
-        SipCall sipCall = getCall(accountID, callID);
+        if(callID.equals("")){
+            callID = "0";
+        }
+
+        SipCall sipCall = getCall(accountID, Integer.parseInt(callID));
         if (sipCall != null) {
             try {
                 sipCall.toggleMute();
@@ -353,6 +400,7 @@ public class SipService extends BackgroundService implements SipServiceConstants
     private void handleHangUpCall(Intent intent) {
         String accountID = intent.getStringExtra(PARAM_ACCOUNT_ID);
         int callID = intent.getIntExtra(PARAM_CALL_ID, 0);
+
 
         try {
             hangupCall(accountID, callID);
@@ -414,6 +462,7 @@ public class SipService extends BackgroundService implements SipServiceConstants
     private void handleTransferCall(Intent intent) {
         String accountID = intent.getStringExtra(PARAM_ACCOUNT_ID);
         int callID = intent.getIntExtra(PARAM_CALL_ID, 0);
+
         String number = intent.getStringExtra(PARAM_NUMBER);
 
         try {
@@ -429,10 +478,14 @@ public class SipService extends BackgroundService implements SipServiceConstants
 
     private void handleAttendedTransferCall(Intent intent) {
         String accountID = intent.getStringExtra(PARAM_ACCOUNT_ID);
-        int callIdOrig = intent.getIntExtra(PARAM_CALL_ID, 0);
+        String callIdOrig = intent.getStringExtra(PARAM_CALL_ID);
+
+        if(callIdOrig == null || callIdOrig.equals("")){
+            callIdOrig = "0";
+        }
 
         try {
-            SipCall sipCallOrig = getCall(accountID, callIdOrig);
+            SipCall sipCallOrig = getCall(accountID, Integer.parseInt(callIdOrig));
             if (sipCallOrig != null) {
                 int callIdDest = intent.getIntExtra(PARAM_CALL_ID_DEST, 0);
                 SipCall sipCallDest = getCall(accountID, callIdDest);
@@ -440,15 +493,19 @@ public class SipService extends BackgroundService implements SipServiceConstants
             }
         } catch (Exception exc) {
             Logger.error(TAG, "Error while finalizing attended transfer", exc);
-            notifyCallDisconnected(accountID, callIdOrig);
+            notifyCallDisconnected(accountID, Integer.parseInt(callIdOrig));
         }
     }
 
     private void handleSetIncomingVideoFeed(Intent intent) {
         String accountID = intent.getStringExtra(PARAM_ACCOUNT_ID);
-        int callID = intent.getIntExtra(PARAM_CALL_ID, 0);
+        String callID = intent.getStringExtra(PARAM_CALL_ID);
 
-        SipCall sipCall = getCall(accountID, callID);
+        if(callID.equals("")){
+            callID = "0";
+        }
+
+        SipCall sipCall = getCall(accountID, Integer.parseInt(callID));
         if (sipCall != null) {
             Bundle bundle = intent.getExtras();
             if (bundle != null) {
@@ -460,11 +517,15 @@ public class SipService extends BackgroundService implements SipServiceConstants
 
     private void handleSetSelfVideoOrientation(Intent intent) {
         String accountID = intent.getStringExtra(PARAM_ACCOUNT_ID);
-        int callID = intent.getIntExtra(PARAM_CALL_ID, 0);
+        String callID = intent.getStringExtra(PARAM_CALL_ID);
+
+        if(callID.equals("")){
+            callID = "0";
+        }
 
         SipAccount sipAccount = mActiveSipAccounts.get(accountID);
         if (sipAccount != null) {
-            SipCall sipCall = getCall(accountID, callID);
+            SipCall sipCall = getCall(accountID, Integer.parseInt(callID));
             if (sipCall != null) {
                 int orientation = intent.getIntExtra(PARAM_ORIENTATION, -1);
                 setSelfVideoOrientation(sipCall, orientation);
@@ -844,10 +905,7 @@ public class SipService extends BackgroundService implements SipServiceConstants
      */
     private void startStack() {
 
-        if (mStarted) {
-            Logger.info(TAG, "SipService already started");
-            return;
-        }
+        if (mStarted) return;
 
         try {
             Logger.debug(TAG, "Starting PJSIP");
@@ -856,19 +914,24 @@ public class SipService extends BackgroundService implements SipServiceConstants
 
             EpConfig epConfig = new EpConfig();
             epConfig.getUaConfig().setUserAgent(AGENT_NAME);
-            epConfig.getMedConfig().setHasIoqueue(true);
-            epConfig.getMedConfig().setClockRate(16000);
-            epConfig.getMedConfig().setQuality(10);
+            epConfig.getMedConfig().setHasIoqueue(false);
+            epConfig.getMedConfig().setEcOptions(pjmedia_echo_flag.PJMEDIA_ECHO_SIMPLE |pjmedia_echo_flag.PJMEDIA_ECHO_USE_NOISE_SUPPRESSOR |pjmedia_echo_flag.PJMEDIA_ECHO_AGGRESSIVENESS_AGGRESSIVE);
+            epConfig.getMedConfig().setClockRate(16000); //8000
+            epConfig.getMedConfig().setQuality(4);
             epConfig.getMedConfig().setEcOptions(1);
-            epConfig.getMedConfig().setEcTailLen(200);
+            epConfig.getMedConfig().setEcTailLen(200); //120
             epConfig.getMedConfig().setThreadCnt(2);
             SipServiceUtils.setSipLogger(epConfig);
             mEndpoint.libInit(epConfig);
+
+
+            //Commented tls and udp transport as not used by press one server at the moment
 
             TransportConfig udpTransport = new TransportConfig();
             udpTransport.setQosType(pj_qos_type.PJ_QOS_TYPE_VOICE);
             TransportConfig tcpTransport = new TransportConfig();
             tcpTransport.setQosType(pj_qos_type.PJ_QOS_TYPE_VOICE);
+            tcpTransport.setTlsConfig(new TlsConfig()); // Not Needed
             TransportConfig tlsTransport = new TransportConfig();
             tlsTransport.setQosType(pj_qos_type.PJ_QOS_TYPE_VOICE);
             SipTlsUtils.setTlsConfig(this, mSharedPreferencesHelper.isVerifySipServerCert(), tlsTransport);
@@ -878,10 +941,12 @@ public class SipService extends BackgroundService implements SipServiceConstants
             mEndpoint.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_TLS, tlsTransport);
             mEndpoint.libStart();
 
-            ArrayList<CodecPriority> codecPriorities = getConfiguredCodecPriorities();
-            SipServiceUtils.setAudioCodecPriorities(codecPriorities, mEndpoint);
+            //ArrayList<CodecPriority> codecPriorities = getConfiguredCodecPriorities();
+            SipServiceUtils.setDefaultAudioCodecPriorites(mEndpoint);
+            //Changing this method as it uses shared preferences which are not set to set codecs
+            //SipServiceUtils.setAudioCodecPriorities(codecPriorities, mEndpoint);
 
-            SipServiceUtils.setVideoCodecPriorities(mEndpoint);
+            //SipServiceUtils.setVideoCodecPriorities(mEndpoint);
 
             Logger.debug(TAG, "PJSIP started!");
             mStarted = true;
@@ -898,10 +963,7 @@ public class SipService extends BackgroundService implements SipServiceConstants
      */
     private void stopStack() {
 
-        if (!mStarted) {
-            Logger.error(TAG, "SipService not started");
-            return;
-        }
+        if (!mStarted) return;
 
         try {
             Logger.debug(TAG, "Stopping PJSIP");
@@ -1058,8 +1120,13 @@ public class SipService extends BackgroundService implements SipServiceConstants
             mActiveSipAccounts.put(accountString, pjSipAndroidAccount);
             Logger.debug(TAG, "SIP account " + getValue(getApplicationContext(), account.getIdUri()) + " successfully added");
         } else {
-            sipAccount.setRegistration(true);
+            try {
+                sipAccount.setRegistration(true);
+            } catch (Exception e) {
+                Toast.makeText(getApplicationContext(),"Please wait... ", Toast.LENGTH_LONG).show();
+            }
         }
+
     }
 
     /**

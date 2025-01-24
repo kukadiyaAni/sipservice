@@ -5,7 +5,7 @@ package net.gotev.sipservice;
  * You can provide your own logger delegate implementation, to be able to log in a different way.
  * By default the log level is set to DEBUG when the build type is debug, and OFF in release.
  * The default logger implementation logs in Android's LogCat.
- * @author gotev (Aleksandar Gotev)
+ *
  */
 @SuppressWarnings("unused")
 public class Logger {
@@ -13,7 +13,6 @@ public class Logger {
     public enum LogLevel {
         DEBUG,
         INFO,
-        WARNING,
         ERROR,
         OFF
     }
@@ -21,9 +20,8 @@ public class Logger {
     public interface LoggerDelegate {
         void error(String tag, String message);
         void error(String tag, String message, Throwable exception);
-        void warning(String tag, String message);
-        void info(String tag, String message);
         void debug(String tag, String message);
+        void info(String tag, String message);
     }
 
     /**
@@ -70,12 +68,6 @@ public class Logger {
     public static void error(String tag, String message, Throwable exception) {
         if (SingletonHolder.instance.mLogLevel.compareTo(LogLevel.ERROR) <= 0) {
             SingletonHolder.instance.mDelegate.error(tag, message, exception);
-        }
-    }
-
-    public static void warning(String tag, String message) {
-        if (SingletonHolder.instance.mLogLevel.compareTo(LogLevel.WARNING) <= 0) {
-            SingletonHolder.instance.mDelegate.warning(tag, message);
         }
     }
 

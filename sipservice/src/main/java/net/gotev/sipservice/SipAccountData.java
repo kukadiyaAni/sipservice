@@ -15,14 +15,13 @@ import java.util.Objects;
 
 /**
  * Contains the account's configuration data.
- * @author gotev (Aleksandar Gotev)
+ *
  */
 @SuppressWarnings("unused")
 public class SipAccountData implements Parcelable {
 
     public static final String AUTH_TYPE_DIGEST = "digest";
     public static final String AUTH_TYPE_PLAIN = "plain";
-    private final int sessionTimerExpireSec = 600;
 
     private String username;
     private String password;
@@ -32,8 +31,8 @@ public class SipAccountData implements Parcelable {
     private boolean tcpTransport = false;
     private String authenticationType = AUTH_TYPE_DIGEST;
     private String contactUriParams = "";
-    private int regExpirationTimeout = 300;     // 300s
-    private String guestDisplayName = "";
+    private int regExpirationTimeout = 1800;     // 300s
+    private String guestDisplayName = "xyz";
     private String callId = "";
     private int srtpUse = pjmedia_srtp_use.PJMEDIA_SRTP_OPTIONAL;
     private int srtpSecureSignalling = 0; // not required
@@ -290,7 +289,6 @@ public class SipAccountData implements Parcelable {
         accountConfig.getRegConfig().setTimeoutSec(regExpirationTimeout);
         accountConfig.getRegConfig().setContactUriParams(contactUriParams);
 
-
         // account sip stuff configs
         accountConfig.getSipConfig().getAuthCreds().add(getAuthCredInfo());
         accountConfig.getSipConfig().getProxies().add(getProxyUri());
@@ -305,9 +303,6 @@ public class SipAccountData implements Parcelable {
         accountConfig.getMediaConfig().setSrtpSecureSignaling(srtpSecureSignalling);
         setVideoConfig(accountConfig);
 
-        // account call config
-        accountConfig.getCallConfig().setTimerSessExpiresSec(sessionTimerExpireSec);
-
         return accountConfig;
     }
 
@@ -320,7 +315,6 @@ public class SipAccountData implements Parcelable {
         accountConfig.setIdUri(idUri);
         accountConfig.getSipConfig().getProxies().add(getProxyUri());
         accountConfig.getRegConfig().setRegisterOnAdd(false);
-        accountConfig.getCallConfig().setTimerSessExpiresSec(sessionTimerExpireSec);
         setVideoConfig(accountConfig);
         return accountConfig;
     }

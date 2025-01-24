@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Emits the sip service broadcast intents.
- * @author gotev (Aleksandar Gotev)
+ *
  */
 public class BroadcastEventEmitter implements SipServiceConstants {
 

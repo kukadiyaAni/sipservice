@@ -5,8 +5,8 @@ import android.content.Context;
 /**
  * connect
  *
- * Created by Vincenzo Esposito on 13/07/21.
- * Copyright © 2021 VoiSmart S.r.l. All rights reserved.
+ *
+ *
  */
 public class ObfuscationHelper {
     public static String getValue(Context context, String string) {

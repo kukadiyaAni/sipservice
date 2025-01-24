@@ -11,7 +11,7 @@ import static net.gotev.sipservice.ObfuscationHelper.getValue;
 
 /**
  * Reference implementation to receive events emitted by the sip service.
- * @author gotev (Aleksandar Gotev)
+ *
  */
 public class BroadcastEventReceiver extends BroadcastReceiver implements SipServiceConstants{
 
@@ -103,7 +103,7 @@ public class BroadcastEventReceiver extends BroadcastReceiver implements SipServ
         }
     }
 
-    protected Context getReceiverContext() {
+    public Context getReceiverContext() {
         return receiverContext;
     }
 
@@ -114,7 +114,6 @@ public class BroadcastEventReceiver extends BroadcastReceiver implements SipServ
      * @param context context in which to register this receiver
      */
     public void register(final Context context) {
-        Logger.info(LOG_TAG, "Registering receiver: "+this+" from context: "+context);
 
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BroadcastEventEmitter.getAction(
@@ -155,12 +154,7 @@ public class BroadcastEventReceiver extends BroadcastReceiver implements SipServ
      * @param context context in which to unregister this receiver
      */
     public void unregister(final Context context) {
-        try {
-            Logger.info(LOG_TAG, "Unregistering BER: " + this + " from context: " + context);
-            context.unregisterReceiver(this);
-        } catch (Exception e) {
-            Logger.error(LOG_TAG, "Error while unregistering BER", e);
-        }
+        context.unregisterReceiver(this);
     }
 
     public void onRegistration(String accountID, int registrationStateCode) {
@@ -169,6 +163,12 @@ public class BroadcastEventReceiver extends BroadcastReceiver implements SipServ
     }
 
     public void onIncomingCall(String accountID, int callID, String displayName, String remoteUri, boolean isVideo) {
+        Intent i = new Intent();
+        i.setClassName("com.example.freeswitchandroid", "com.example.freeswitchandroid.CallsActivity");
+        i.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+        i.putExtra("call", "incoming");
+        i.putExtra("caller", remoteUri);
+        getReceiverContext().startActivity(i);
         Logger.debug(LOG_TAG, "onIncomingCall - accountID: " + getValue(getReceiverContext(), accountID) +
                 ", callID: " + callID +
                 ", displayName: " + displayName +

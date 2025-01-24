@@ -18,8 +18,8 @@ import java.util.List;
 /**
  * connect
  *
- * Created by Vincenzo Esposito on 25/11/19.
- * Copyright © 2019 VoiSmart S.r.l. All rights reserved.
+ *
+ *
  */
 @SuppressWarnings("unused")
 public class SharedPreferencesHelper {

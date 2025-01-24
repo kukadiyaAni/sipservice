@@ -14,7 +14,7 @@ import static net.gotev.sipservice.ObfuscationHelper.getValue;
 
 /**
  * Wrapper around PJSUA2 Account object.
- * @author gotev (Aleksandar Gotev)
+ *
  */
 public class SipAccount extends Account {
 
@@ -139,9 +139,6 @@ public class SipAccount extends Account {
 
     @Override
     public void onRegState(OnRegStateParam prm) {
-        Logger.info(LOG_TAG, "Sip Reg Info - Code: " + prm.getCode() +
-                ", Reason: " + prm.getReason() + ", Exp: " + prm.getExpiration() + ", Status: " + prm.getStatus()
-        );
         service.getBroadcastEmitter().registrationState(data.getIdUri(), prm.getCode());
     }
 
@@ -156,9 +153,9 @@ public class SipAccount extends Account {
                 CallerInfo contactInfo = new CallerInfo(call.getInfo());
                 service.getBroadcastEmitter().missedCall(contactInfo.getDisplayName(), contactInfo.getRemoteUri());
                 call.declineIncomingCall();
-                Logger.debug(LOG_TAG, "DND - Decline call with ID: " + prm.getCallId());
+                Logger.debug(LOG_TAG, "Decline call with ID: " + prm.getCallId());
             } catch(Exception ex) {
-                Logger.error(LOG_TAG, "Error while getting -missed because declined- call info", ex);
+                Logger.error(LOG_TAG, "Error while getting missed call info", ex);
             }
             return;
         }
